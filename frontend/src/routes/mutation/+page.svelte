@@ -4,9 +4,10 @@
   let mutationData = {};
   let expandedLines = new Set();
   let expanded = new Set(['src', 'src/script', 'src/wallet']);
-  
+  let mobileNavVisible = true;
+
   const GITHUB_RAW_BASE = 'https://raw.githubusercontent.com/bitcoin/bitcoin/master';
-  
+
   const files = {
     'src': {
       'wallet': {
@@ -30,7 +31,7 @@
 
   async function handleFileSelect(file) {
     selectedFile = file;
-    
+
     try {
       // Fetch mutations from local public directory
       const mutationsResp = await fetch('https://api-dev.corecheck.dev/mutations');
@@ -48,6 +49,10 @@
         throw new Error(`Failed to fetch file: ${contentResp.status}`);
       }
       fileContent = await contentResp.text();
+
+      if (window.innerWidth < 768) {
+        mobileNavVisible = false;
+      }
     } catch (error) {
       console.error('Error:', error);
       fileContent = `Error loading content: ${error.message}`;
@@ -71,6 +76,10 @@
     } else {
       expanded.add(path);
     }
+  }
+
+  function toggleMobileNav() {
+    mobileNavVisible = !mobileNavVisible;
   }
 
   function renderTree(tree, path = '') {
@@ -97,8 +106,13 @@
 </script>
 
 <div class="page-wrapper">
+  <!-- Mobile Toggle Button -->
+  <button class="mobile-nav-toggle" on:click={toggleMobileNav}>
+    {mobileNavVisible ? '✕ Hide Files' : '☰ Show Files'}
+  </button>
+
   <!-- File Tree -->
-  <div class="file-tree">
+  <div class="file-tree" class:mobile-hidden={!mobileNavVisible}>
     <h2 class="text-xl font-bold mb-4">Files</h2>
     {#each treeData as item}
       {#if item.type === 'file'}
@@ -161,8 +175,8 @@
   {#if !selectedFile}
     <div class="content">
       <div class="">
-        <div class="shadow document" style="">
-          <div class="heading" style="">
+        <div class="shadow document">
+          <div class="heading">
             <h2 class="">Mutation Testing</h2>
           </div>
 
@@ -191,15 +205,14 @@
         </div>
       </div>
     </div>
-
-
   {/if}
+
   <!-- Content View -->
   {#if selectedFile}
     <div class="content">
       <div class="">
-        <div class="shadow document" style="">
-          <div class="heading" style="">
+        <div class="shadow document">
+          <div class="heading">
             <h2 class="">{selectedFile}</h2>
           </div>
 
@@ -211,11 +224,10 @@
 
                 <div class="">
                   <div
-                    style=""
                     class="line-wrapper {hasMutants ? 'red' : ''}"
                     on:click={() => hasMutants && toggleLine(lineNumber)}
                   >
-                    <div class="lineno" style="">
+                    <div class="lineno">
                       {lineNumber}
                     </div>
                     <div class="line">
@@ -252,21 +264,51 @@
 </div>
 
 <style>
-  .file-tree {
+  /* Mobile-first approach */
+  .page-wrapper {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+
+  .mobile-nav-toggle {
+    display: block;
     position: fixed;
-    width: 300px;
-    height: 100vh;
+    top: 10px;
+    right: 10px;
+    z-index: 1000;
+    padding: 8px 12px;
+    background-color: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 14px;
+  }
+
+  .file-tree {
+    width: 100%;
+    height: auto;
+    max-height: 50vh;
     overflow-y: auto;
     background: #f8f9fa;
     padding: 1rem;
-    border-right: 1px solid #dee2e6;
+    border-bottom: 1px solid #dee2e6;
+    position: relative;
+    z-index: 10;
+  }
+
+  .mobile-hidden {
+    display: none;
   }
 
   .content {
-    margin-left: 300px;
+    width: 100%;
+    margin-left: 0;
     padding: 1rem;
     background-color: white;
   }
+
   .content a {
     cursor: pointer;
   }
@@ -274,67 +316,123 @@
   .directory {
     padding-left: 1.5rem;
   }
+
   .shadow {
-    --tw-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1),0 4px 6px -2px rgba(0, 0, 0, 0.05);
-    box-shadow: 0 0 #0000,0 0 #0000, 0 0 #0000,0 0 #0000,var(--tw-shadow);
+    --tw-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    box-shadow: 0 0 #0000, 0 0 #0000, 0 0 #0000, 0 0 #0000, var(--tw-shadow);
   }
+
   .heading {
     padding: 1rem;
     border-bottom-width: 1px;
     border-style: solid;
     border-color: rgba(229, 231, 235, 1);
   }
+
   .document {
-    max-width: 72rem;
+    max-width: 100%;
     margin-right: auto;
-    margin-left: 50px;
+    margin-left: 0;
     font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
   }
+
   .main-content {
     padding: 1rem;
-    background-color: rgba(249,250,251,1);
-    min-height: 100vh;
+    background-color: rgba(249, 250, 251, 1);
+    min-height: 50vh;
+    overflow-x: auto;
   }
+
   .line {
-    color: rgba(5,150,105,1);
+    color: rgba(5, 150, 105, 1);
     flex: 1 1 0%;
-    overflow: hidden;
+    overflow-x: auto;
     display: flex;
   }
+
   .lineno {
-    color: rgba(107,114,128,1);
-    width: 3rem;
+    color: rgba(107, 114, 128, 1);
+    min-width: 3rem;
+    flex-shrink: 0;
   }
+
   .line-wrapper {
     display: flex;
     align-items: flex-start;
+    overflow-x: auto;
+    width: 100%;
   }
+
   .chevron {
     margin-right: 0.5rem;
   }
+
   .red {
-    background-color: rgba(254,226,226,1);
+    background-color: rgba(254, 226, 226, 1);
   }
+
   .mutant-container {
     padding-left: 1rem;
     border-style: solid;
     border-left-width: 2px;
-    border-color: rgba(229,231,235,1);
+    border-color: rgba(229, 231, 235, 1);
     margin-left: 3rem;
     margin-bottom: .5rem;
     margin-top: .5rem;
+    overflow-x: auto;
   }
+
   .mutant-title {
-    color: rgba(75,85,99,1);
+    color: rgba(75, 85, 99, 1);
   }
+
   mutant-block {
     margin-bottom: 1rem;
   }
+
   .mutant-content {
     font-size: .875rem;
     line-height: 1.25rem;
     padding: 0.5rem;
-    background-color: rgba(243,244,246,1);
-    overflow: hidden;
+    background-color: rgba(243, 244, 246, 1);
+    overflow-x: auto;
+  }
+
+  pre {
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+
+  /* Desktop styles */
+  @media (min-width: 768px) {
+    .page-wrapper {
+      flex-direction: row;
+    }
+
+    .mobile-nav-toggle {
+      display: none;
+    }
+
+    .file-tree {
+      position: fixed;
+      width: 300px;
+      height: 100vh;
+      max-height: none;
+      border-right: 1px solid #dee2e6;
+      border-bottom: none;
+    }
+
+    .mobile-hidden {
+      display: block;
+    }
+
+    .content {
+      margin-left: 300px;
+      width: calc(100% - 300px);
+    }
+
+    .document {
+      margin-left: 50px;
+    }
   }
 </style>
